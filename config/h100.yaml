@@ -1,7 +1,7 @@
-# H100 GPU Optimized Configuration
-# Maximizes H100 performance with bfloat16, torch.compile, and larger batches
+# Dual H100 Configuration
+# Uses GPU 1 (free) and maximizes H100 performance
 
-# Model Architecture (larger for H100's memory)
+# Model Architecture
 model:
   n_layer: 6
   n_embd: 256
@@ -10,9 +10,9 @@ model:
   vocab_size: 256
   dropout: 0.1
 
-# Retrieval
+# Retrieval - can use more chunks with H100 memory
 retrieval:
-  top_k: 30  # Increased for better recall
+  top_k: 50  # H100 can handle more
   similarity_type: cosine
 
 # Aggregation
@@ -39,16 +39,16 @@ paths:
   checkpoint_dir: "./checkpoints"
   log_dir: "./logs"
 
-# Training - H100 Optimized
+# Training - H100 81GB Optimized
 training:
-  epochs: 50
+  epochs: 100
   learning_rate: 0.001
   weight_decay: 0.1
-  warmup_epochs: 3
-  gradient_accumulation: 1  # H100 has enough memory
+  warmup_epochs: 5
+  gradient_accumulation: 1  # No need with 81GB
   max_grad_norm: 1.0
   use_amp: true
-  compile: true  # torch.compile for H100
+  compile: true  # torch.compile for max speed
   log_freq: 5
   save_every: 10
 
@@ -60,6 +60,7 @@ loss:
 # Reproducibility
 seed: 1337
 
-# Device - H100 optimized
+# Device - Use GPU 1 (free)
 device: cuda
-dtype: bfloat16  # H100 is optimized for bfloat16
+dtype: bfloat16
+cuda_device: 1  # Use GPU 1 which is free
