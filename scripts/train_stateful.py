@@ -202,10 +202,31 @@ def main():
     training_cfg = config.get('training', {})
     
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
+    
+    # H100 GPU Optimizations
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True
+        torch.set_float32_matmul_precision('high')
+        
+        gpu_name = torch.cuda.get_device_name(0)
+        gpu_mem = torch.cuda.get_device_properties(0).total_memory / 1e9
+        print(f"GPU: {gpu_name} ({gpu_mem:.1f} GB)")
+    
+    # Mixed precision setup
+    dtype = config.get('dtype', 'bfloat16')
+    use_amp = training_cfg.get('use_amp', True)
+    ptdtype = torch.bfloat16 if dtype == 'bfloat16' else torch.float16
+    ctx = torch.amp.autocast(device_type='cuda', dtype=ptdtype) if use_amp else nullcontext()
+    scaler = torch.amp.GradScaler('cuda', enabled=(dtype == 'float16'))
+    
+    print(f"Device: {device}, AMP: {use_amp}, dtype: {dtype}")
     
     # Seed
     torch.manual_seed(config.get('seed', 42))
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(config.get('seed', 42))
     
     # Setup
     tokenizer = ByteTokenizer()
@@ -317,16 +338,20 @@ def main():
             
             optimizer.zero_grad()
             
-            # Forward
-            result = model(chunks, backstory_tokens)
+            # Forward with AMP
+            with ctx:
+                result = model(chunks, backstory_tokens)
+                
+                # Loss
+                target = torch.tensor([[label]], device=device)
+                loss = criterion(result['logit'], target)
             
-            # Loss
-            target = torch.tensor([[label]], device=device)
-            loss = criterion(result['logit'], target)
-            
-            loss.backward()
+            # Backward with scaler
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
+            scaler.step(optimizer)
+            scaler.update()
             
             train_loss += loss.item()
             pred = 1 if result['prediction'].item() > 0.5 else 0
