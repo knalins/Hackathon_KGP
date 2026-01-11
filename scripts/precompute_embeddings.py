@@ -106,12 +106,12 @@ def main():
         
         # Tokenize
         chunk_texts = [c['text'] for c in chunks]
-        chunk_tokens = []
-        for ct in chunk_texts:
-            tokens = tokenizer.encode(ct, max_length=max_tokens, padding=True)
-            chunk_tokens.append(tokens)
-        
-        chunk_tokens = torch.stack(chunk_tokens).to(device)
+        chunk_tokens = tokenizer.batch_encode(
+            chunk_texts, 
+            max_length=max_tokens, 
+            padding=True,
+            return_tensors='pt'
+        ).to(device)
         print(f"  Token shape: {chunk_tokens.shape}")
         
         # Encode in batches
