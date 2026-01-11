@@ -262,6 +262,10 @@ class StatefulBDHProcessor(nn.Module):
         """
         Full forward pass: process all novel chunks, then query with backstory.
         
+        NOTE: Chunk processing is done WITHOUT gradients to enable full novel
+        processing without OOM. Only the query_state (backstory attention) 
+        and subsequent verifier layers compute gradients.
+        
         Args:
             novel_chunks: List of token tensors for novel chunks
             backstory_ids: Backstory token IDs (B, T)
@@ -275,22 +279,26 @@ class StatefulBDHProcessor(nn.Module):
         # Initialize state
         state = self.init_state(B, device)
         
-        # Process each chunk
+        # Process chunks WITHOUT gradients (memory efficient for full novel)
+        # This allows processing 3000+ chunks without OOM
         position = 0
-        chunk_embeddings = []
         
-        for chunk in novel_chunks:
-            chunk = chunk.to(device)
-            if chunk.size(0) != B:
-                chunk = chunk.expand(B, -1)
-            
-            state, chunk_emb = self.process_chunk(chunk, state, position)
-            chunk_embeddings.append(chunk_emb)
-            position += chunk.size(1)
+        with torch.no_grad():
+            for chunk in novel_chunks:
+                chunk = chunk.to(device)
+                if chunk.size(0) != B:
+                    chunk = chunk.expand(B, -1)
+                
+                state, _ = self.process_chunk(chunk, state, position)
+                position += chunk.size(1)
         
-        # Query with backstory
+        # Detach state for gradient computation in query
+        state.kv_sum = state.kv_sum.detach().requires_grad_(True)
+        state.k_sum = state.k_sum.detach().requires_grad_(True)
+        state.neuron_accumulator = state.neuron_accumulator.detach().requires_grad_(True)
+        
+        # Query with backstory - THIS part computes gradients
         result = self.query_state(backstory_ids, state)
-        result['chunk_embeddings'] = torch.stack(chunk_embeddings, dim=1)
         result['num_tokens_processed'] = state.num_tokens
         
         return result
