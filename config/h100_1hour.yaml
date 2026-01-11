@@ -1,0 +1,62 @@
+# 1-Hour Training Config for 2x H100
+# Optimized for: accuracy + 1 hour training + GPU utilization
+
+# Model Architecture - Sweet spot for small dataset
+model:
+  n_layer: 6
+  n_embd: 256
+  n_head: 4
+  mlp_multiplier: 128
+  vocab_size: 256
+  dropout: 0.2            # Regularization for small data
+
+# Retrieval - Efficient
+retrieval:
+  top_k: 30
+  similarity_type: cosine
+
+# Aggregation
+aggregation:
+  strategy: max
+  top_k: 5
+
+# Data Processing
+data:
+  chunk_size: 1024
+  chunk_overlap: 256
+  max_backstory_tokens: 512
+  max_chunk_tokens: 512
+  validation_split: 0.15
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# Training - 1 HOUR TARGET
+training:
+  epochs: 50              # ~50 epochs in 1 hour
+  learning_rate: 0.0005   # Higher LR for faster convergence
+  weight_decay: 0.05
+  warmup_epochs: 3
+  gradient_accumulation: 1
+  max_grad_norm: 1.0
+  use_amp: true
+  compile: false
+  log_freq: 10
+  save_every: 10
+
+# Loss
+loss:
+  margin_weight: 0.1
+  margin: 0.3
+
+seed: 1337
+device: cuda
+dtype: bfloat16
