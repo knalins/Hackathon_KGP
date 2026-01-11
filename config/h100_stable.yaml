@@ -48,7 +48,7 @@ training:
   gradient_accumulation: 1  # H100 has enough memory - full batch
   max_grad_norm: 1.0
   use_amp: true
-  compile: true         # torch.compile for H100 speedup
+  compile: false        # Disabled - server missing python3-dev headers
   log_freq: 5
   save_every: 10
 
