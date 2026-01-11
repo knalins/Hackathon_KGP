@@ -1,0 +1,65 @@
+# Stabilized Training Configuration
+# Fixes for small dataset (80 samples) training instability
+
+# Model Architecture
+model:
+  n_layer: 4          # Reduced - less overfitting on small data
+  n_embd: 128         # Reduced - match data size
+  n_head: 4
+  mlp_multiplier: 64  # Reduced
+  vocab_size: 256
+  dropout: 0.3        # Increased - more regularization
+
+# Retrieval
+retrieval:
+  top_k: 10           # Reduced - less noise
+  similarity_type: cosine
+
+# Aggregation
+aggregation:
+  strategy: max
+  top_k: 3
+
+# Data Processing
+data:
+  chunk_size: 1024
+  chunk_overlap: 256
+  max_backstory_tokens: 512
+  max_chunk_tokens: 512
+  validation_split: 0.15  # Keep more for training
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# Training - STABILIZED
+training:
+  epochs: 50
+  learning_rate: 0.0001    # 10x lower - more stable
+  weight_decay: 0.01       # Lower - less aggressive
+  warmup_epochs: 5         # Warmup for stability
+  gradient_accumulation: 4 # Accumulate for smoother gradients
+  max_grad_norm: 0.5       # Clip gradients more
+  use_amp: true
+  compile: false           # Disable for debugging
+  log_freq: 5
+  save_every: 10
+
+# Loss
+loss:
+  margin_weight: 0.05      # Lower - less aggressive
+  margin: 0.2
+
+# Reproducibility
+seed: 42
+
+# Device
+device: cuda
+dtype: bfloat16

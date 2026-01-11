@@ -343,11 +343,26 @@ def main():
     print(f"Trainable parameters: {num_trainable:,}")
     
     # Optimizer (official BDH pattern)
+    base_lr = training_cfg.get('learning_rate', 1e-3)
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=training_cfg.get('learning_rate', 1e-3),
+        lr=base_lr,
         weight_decay=training_cfg.get('weight_decay', 0.1)
     )
+    
+    # Learning rate scheduler with warmup
+    epochs = training_cfg.get('epochs', 20)
+    warmup_epochs = training_cfg.get('warmup_epochs', 2)
+    
+    def lr_lambda(epoch):
+        if epoch < warmup_epochs:
+            return (epoch + 1) / warmup_epochs  # Linear warmup
+        else:
+            # Cosine decay
+            progress = (epoch - warmup_epochs) / (epochs - warmup_epochs)
+            return 0.5 * (1 + np.cos(np.pi * progress))
+    
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
     
     # Create checkpoint dir
     checkpoint_dir = paths_cfg.get('checkpoint_dir', './checkpoints')
@@ -394,7 +409,11 @@ def main():
             log_freq=log_freq
         )
         
-        print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
+        # Step scheduler
+        scheduler.step()
+        current_lr = scheduler.get_last_lr()[0]
+        
+        print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, LR: {current_lr:.6f}")
         
         # Validate
         if val_loader:
