@@ -14,16 +14,18 @@ def compute_loss(
     predictions: torch.Tensor,
     targets: torch.Tensor,
     pos_weight: Optional[float] = None,
-    reduction: str = 'mean'
+    reduction: str = 'mean',
+    is_logits: bool = True
 ) -> torch.Tensor:
     """
     Binary Cross Entropy loss with optional class weighting.
     
     Args:
-        predictions: Predicted probabilities (B,) or (B, 1)
+        predictions: Predicted LOGITS (B,) or (B, 1) - NOT probabilities!
         targets: Ground truth labels (B,), 0 or 1
         pos_weight: Weight for positive class (for imbalanced data)
         reduction: 'mean', 'sum', or 'none'
+        is_logits: If True, use BCEWithLogitsLoss. If False, use BCE (legacy).
         
     Returns:
         Loss tensor
@@ -32,22 +34,35 @@ def compute_loss(
     predictions = predictions.view(-1)
     targets = targets.view(-1).float()
     
-    # Clamp predictions for numerical stability
-    predictions = predictions.clamp(1e-7, 1 - 1e-7)
-    
-    # BCE: -[y*log(p) + (1-y)*log(1-p)]
-    loss = -targets * torch.log(predictions) - (1 - targets) * torch.log(1 - predictions)
-    
-    # Apply class weighting
-    if pos_weight is not None:
-        weights = torch.where(targets == 1, pos_weight, 1.0)
-        loss = loss * weights
-    
-    if reduction == 'mean':
-        return loss.mean()
-    elif reduction == 'sum':
-        return loss.sum()
-    return loss
+    if is_logits:
+        # Use BCEWithLogitsLoss - numerically stable and works with logits
+        if pos_weight is not None:
+            pos_weight_tensor = torch.tensor([pos_weight], device=predictions.device)
+            loss = F.binary_cross_entropy_with_logits(
+                predictions, targets, 
+                pos_weight=pos_weight_tensor,
+                reduction=reduction
+            )
+        else:
+            loss = F.binary_cross_entropy_with_logits(
+                predictions, targets,
+                reduction=reduction
+            )
+        return loss
+    else:
+        # Legacy: expects probabilities (DEPRECATED - causes gradient issues)
+        predictions = predictions.clamp(1e-7, 1 - 1e-7)
+        loss = -targets * torch.log(predictions) - (1 - targets) * torch.log(1 - predictions)
+        
+        if pos_weight is not None:
+            weights = torch.where(targets == 1, pos_weight, 1.0)
+            loss = loss * weights
+        
+        if reduction == 'mean':
+            return loss.mean()
+        elif reduction == 'sum':
+            return loss.sum()
+        return loss
 
 
 class MILBCELoss(nn.Module):

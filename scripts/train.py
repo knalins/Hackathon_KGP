@@ -178,8 +178,8 @@ def train_epoch(
             scaler.update()
             optimizer.zero_grad()
         
-        # Accuracy tracking
-        pred = (result['prediction'] > 0.5).long()
+        # Accuracy tracking (apply sigmoid since model outputs logits)
+        pred = (torch.sigmoid(result['prediction']) > 0.5).long()
         correct += (pred == labels.squeeze()).sum().item()
         total += 1
         
@@ -228,7 +228,7 @@ def validate(model, val_loader, device, ctx):
         loss = compute_loss(result['prediction'], labels.squeeze().float())
         total_loss += loss.item()
         
-        pred = (result['prediction'] > 0.5).long()
+        pred = (torch.sigmoid(result['prediction']) > 0.5).long()
         correct += (pred == labels.squeeze()).sum().item()
         total += 1
     

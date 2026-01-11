@@ -207,11 +207,11 @@ class LightweightVerifier(nn.Module):
         neuron_combined = torch.cat([chunk_neurons, backstory_neurons], dim=-1)
         neuron_logit = self.neuron_scorer(neuron_combined)
         
-        # Combine
+        # Combine - output LOGITS (no sigmoid!) for BCEWithLogitsLoss
         combined = torch.cat([emb_logit, neuron_logit], dim=-1)
-        score = torch.sigmoid(self.combiner(combined))
+        logit = self.combiner(combined)  # Raw logit output
         
         if squeeze_output:
-            score = score.squeeze(0)
+            logit = logit.squeeze(0)
         
-        return score
+        return logit
