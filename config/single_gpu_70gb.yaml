@@ -1,0 +1,62 @@
+# Single GPU 70GB Configuration
+# Uses full GPU capacity for BEST accuracy in 1.5 hours
+
+# Model Architecture - LARGER for better accuracy
+model:
+  n_layer: 10           # More layers for better representation
+  n_embd: 448           # Larger embedding
+  n_head: 8
+  mlp_multiplier: 224
+  vocab_size: 256
+  dropout: 0.15
+
+# Retrieval - More chunks for better coverage
+retrieval:
+  top_k: 80             # Process 80 chunks (uses ~60GB)
+  similarity_type: cosine
+
+# Aggregation
+aggregation:
+  strategy: attention   # Learned attention for better aggregation
+  top_k: 10
+
+# Data Processing - Longer sequences
+data:
+  chunk_size: 1024
+  chunk_overlap: 256
+  max_backstory_tokens: 768    # Longer backstory
+  max_chunk_tokens: 768        # Longer chunks
+  validation_split: 0.15
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# Training - 1.5 HOUR TARGET on SINGLE GPU
+training:
+  epochs: 60              # More epochs for accuracy
+  learning_rate: 0.0003   # Moderate LR
+  weight_decay: 0.03
+  warmup_epochs: 5
+  gradient_accumulation: 2  # Effective batch = 2
+  max_grad_norm: 1.0
+  use_amp: true
+  compile: false
+  log_freq: 5
+  save_every: 10
+
+# Loss
+loss:
+  margin_weight: 0.15     # Stronger MIL signal
+  margin: 0.3
+
+seed: 1337
+device: cuda
+dtype: bfloat16
