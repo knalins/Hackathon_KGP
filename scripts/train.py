@@ -8,22 +8,12 @@ Usage:
     python train.py                         # Use config/default.yaml
     python train.py --config custom.yaml    # Use custom config
     python train.py --epochs 30             # Override config values
-    python train.py --gpu 1                 # Use GPU 1
 """
 
 import os
 import sys
 from pathlib import Path
 from contextlib import nullcontext
-
-# CRITICAL: Set GPU BEFORE importing torch
-# Parse --gpu argument early
-for i, arg in enumerate(sys.argv):
-    if arg == '--gpu' and i + 1 < len(sys.argv):
-        gpu_id = sys.argv[i + 1]
-        os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
-        print(f"[EARLY] Setting CUDA_VISIBLE_DEVICES={gpu_id}")
-        break
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -120,7 +110,6 @@ def parse_args():
     parser.add_argument("--epochs", type=int, help="Override number of epochs")
     parser.add_argument("--lr", type=float, help="Override learning rate")
     parser.add_argument("--device", type=str, help="Override device (cuda/cpu/mps)")
-    parser.add_argument("--gpu", type=int, default=None, help="Force specific GPU index (0 or 1)")
     parser.add_argument("--checkpoint_dir", type=str, help="Override checkpoint directory")
     parser.add_argument("--compile", action="store_true", help="Use torch.compile")
     parser.add_argument("--resume", type=str, help="Resume from checkpoint")
@@ -299,15 +288,6 @@ def main():
     # Setup device and dtype (official BDH pattern + H100 optimizations)
     device_config = config.get('device', 'auto')
     dtype_config = config.get('dtype', 'auto')
-    
-    # Force specific GPU if requested
-    if args.gpu is not None:
-        import os
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-        torch.cuda.set_device(0)  # After CUDA_VISIBLE_DEVICES, GPU becomes cuda:0
-        print(f"Forcing GPU {args.gpu}")
-        device_config = 'cuda'
-    
     device, dtype, ptdtype, ctx, scaler = setup_device_and_dtype(device_config, dtype_config)
     
     # Data config
