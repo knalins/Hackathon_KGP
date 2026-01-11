@@ -1,0 +1,70 @@
+# FINAL: 1-Hour Maximum Performance Config for 2x H100
+# Full GPU utilization + Best accuracy + 1 hour training
+
+# Model Architecture - Optimal for 80 samples + GPU memory
+model:
+  n_layer: 8              # More layers for better features
+  n_embd: 384             # Larger embeddings
+  n_head: 6
+  mlp_multiplier: 192
+  vocab_size: 256
+  dropout: 0.25           # Strong regularization for small data
+
+# Retrieval - Use more chunks (GPU can handle it)
+retrieval:
+  top_k: 40               # More chunks for better retrieval
+  similarity_type: cosine
+
+# Aggregation
+aggregation:
+  strategy: attention     # Learnable attention (better than max)
+  top_k: 5
+
+# Data Processing
+data:
+  chunk_size: 1024
+  chunk_overlap: 256
+  max_backstory_tokens: 512
+  max_chunk_tokens: 512
+  validation_split: 0.15
+  num_workers: 4          # Parallel data loading
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# Training - OPTIMIZED FOR 1 HOUR
+training:
+  epochs: 60              # More epochs for better convergence
+  learning_rate: 0.0003   # Balanced LR
+  weight_decay: 0.05
+  warmup_epochs: 5
+  gradient_accumulation: 1
+  max_grad_norm: 1.0
+  use_amp: true
+  compile: false
+  log_freq: 5
+  save_every: 15
+  label_smoothing: 0.1    # Regularization for small data
+
+# Loss - Enhanced
+loss:
+  margin_weight: 0.15
+  margin: 0.25
+  focal_gamma: 2.0        # Focal loss for class imbalance
+
+seed: 1337
+device: cuda
+dtype: bfloat16
+
+# Memory optimization
+memory:
+  pin_memory: true
+  prefetch_factor: 2

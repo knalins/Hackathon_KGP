@@ -234,9 +234,22 @@ def main():
         config=data_config, batch_size=1, seed=seed
     )
     
+    # Parallel data loading config
+    num_workers = data_cfg.get('num_workers', 4)
+    memory_cfg = config.get('memory', {})
+    pin_memory = memory_cfg.get('pin_memory', True)
+    prefetch_factor = memory_cfg.get('prefetch_factor', 2)
+    
     train_sampler = DistributedSampler(train_loader.dataset, num_replicas=world_size, rank=local_rank, shuffle=True)
     train_loader = torch.utils.data.DataLoader(
-        train_loader.dataset, batch_size=1, sampler=train_sampler, num_workers=0, collate_fn=collate_fn
+        train_loader.dataset, 
+        batch_size=1, 
+        sampler=train_sampler, 
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        pin_memory=pin_memory,
+        prefetch_factor=prefetch_factor if num_workers > 0 else None,
+        persistent_workers=num_workers > 0
     )
     
     if is_main_process():
