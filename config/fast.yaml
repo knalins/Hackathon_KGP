@@ -1,0 +1,64 @@
+# FAST Training Config
+# Optimized for speed on A100/H100
+# Expected: 4 min/epoch instead of 40 min
+
+# Model: SMALL for 80 samples
+model:
+  n_layer: 4
+  n_embd: 256
+  n_head: 4
+  mlp_multiplier: 64  # Reduced from 192
+  vocab_size: 256
+  dropout: 0.2
+
+# Retrieval: MINIMAL
+retrieval:
+  top_k: 10  # Reduced from 50
+  similarity_type: cosine
+
+# Aggregation
+aggregation:
+  strategy: max
+  top_k: 3
+
+# Data
+data:
+  chunk_size: 1024
+  chunk_overlap: 256
+  max_backstory_tokens: 256  # Reduced from 512
+  max_chunk_tokens: 256      # Reduced from 512
+  validation_split: 0.15
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  embeddings_cache: "./cache"  # Precomputed embeddings
+
+# Training - FAST
+training:
+  epochs: 15
+  learning_rate: 0.001
+  weight_decay: 0.01
+  warmup_epochs: 2
+  gradient_accumulation: 1
+  max_grad_norm: 1.0
+  use_amp: true
+  compile: false
+  log_freq: 5
+  save_every: 5
+  validate_every: 3  # Only validate every 3 epochs
+
+# Loss
+loss:
+  margin_weight: 0.1
+  margin: 0.3
+
+seed: 42
+device: cuda
+dtype: bfloat16
