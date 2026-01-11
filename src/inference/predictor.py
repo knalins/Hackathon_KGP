@@ -53,7 +53,8 @@ class Predictor:
     def from_checkpoint(
         cls,
         checkpoint_path: str,
-        device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
+        device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
+        config_override: dict = None
     ) -> 'Predictor':
         """
         Load predictor from checkpoint.
@@ -61,14 +62,50 @@ class Predictor:
         Args:
             checkpoint_path: Path to checkpoint file
             device: Device for inference
+            config_override: Optional config dict to override checkpoint config
             
         Returns:
             Predictor instance
         """
-        checkpoint = torch.load(checkpoint_path, map_location=device)
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
         
-        # Reconstruct config
-        pipeline_config = PipelineConfig(**checkpoint['pipeline_config'])
+        # Handle different checkpoint formats
+        if config_override is not None:
+            # Use provided config
+            model_cfg = config_override.get('model', {})
+            retrieval_cfg = config_override.get('retrieval', {})
+            aggregation_cfg = config_override.get('aggregation', {})
+            
+            pipeline_config = PipelineConfig(
+                n_layer=model_cfg.get('n_layer', 6),
+                n_embd=model_cfg.get('n_embd', 256),
+                n_head=model_cfg.get('n_head', 4),
+                mlp_multiplier=model_cfg.get('mlp_multiplier', 128),
+                dropout=model_cfg.get('dropout', 0.1),
+                top_k_retrieval=retrieval_cfg.get('top_k', 20),
+                aggregation=aggregation_cfg.get('strategy', 'max')
+            )
+        elif 'pipeline_config' in checkpoint:
+            pipeline_config = PipelineConfig(**checkpoint['pipeline_config'])
+        elif 'config' in checkpoint:
+            # Handle config saved from train.py
+            cfg = checkpoint['config']
+            model_cfg = cfg.get('model', {})
+            retrieval_cfg = cfg.get('retrieval', {})
+            aggregation_cfg = cfg.get('aggregation', {})
+            
+            pipeline_config = PipelineConfig(
+                n_layer=model_cfg.get('n_layer', 6),
+                n_embd=model_cfg.get('n_embd', 256),
+                n_head=model_cfg.get('n_head', 4),
+                mlp_multiplier=model_cfg.get('mlp_multiplier', 128),
+                dropout=model_cfg.get('dropout', 0.1),
+                top_k_retrieval=retrieval_cfg.get('top_k', 20),
+                aggregation=aggregation_cfg.get('strategy', 'max')
+            )
+        else:
+            raise ValueError("Checkpoint missing 'config' or 'pipeline_config'. "
+                           "Please provide config_override parameter.")
         
         # Create model
         model = BDHNLIPipeline(pipeline_config)
