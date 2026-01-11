@@ -152,6 +152,7 @@ def main():
             
             # Format backstory
             backstory_text = format_backstory_input(
+                book_name=book_name,
                 character=row.get('char', ''),
                 caption=row.get('caption', ''),
                 content=content
@@ -159,7 +160,7 @@ def main():
             backstory_text = normalizer.normalize(backstory_text)
             
             # Tokenize
-            backstory_tokens = tokenizer.encode(backstory_text, max_length=max_backstory, padding=True)
+            backstory_tokens = tokenizer.encode(backstory_text, max_length=max_backstory, padding=True, return_tensors='pt')
             backstory_tokens = backstory_tokens.unsqueeze(0).to(device)
             
             # Get cache
