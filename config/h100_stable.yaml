@@ -1,32 +1,32 @@
-# H100 Dual-GPU Stable Training Configuration
-# Combines: training stability + H100 performance + 2-GPU utilization
+# H100 Stable Training - AUDIT FIXED
+# Changes from audit: smaller model, lower LR, early stopping
 
-# Model Architecture (balanced for small data + H100 capacity)
+# Model Architecture - REDUCED to prevent overfitting (68 samples)
 model:
-  n_layer: 6            # Use H100's capacity
-  n_embd: 256           # Full embedding dimension
+  n_layer: 4            # Reduced from 6 (less capacity = less overfit)
+  n_embd: 128           # Reduced from 256 (4x fewer params)
   n_head: 4
-  mlp_multiplier: 128
+  mlp_multiplier: 64    # Reduced from 128 (2x fewer params)
   vocab_size: 256
-  dropout: 0.2          # Regularization (but not too aggressive)
+  dropout: 0.3          # Increased from 0.2 (more regularization)
 
-# Retrieval - leverage H100 memory
+# Retrieval - reduced for speed
 retrieval:
-  top_k: 30             # More chunks on H100
+  top_k: 15             # Reduced from 30 (faster, still sufficient)
   similarity_type: cosine
 
 # Aggregation
 aggregation:
   strategy: max
-  top_k: 5
+  top_k: 3
 
-# Data Processing
+# Data Processing - reduced sequence lengths
 data:
-  chunk_size: 1024
-  chunk_overlap: 256
-  max_backstory_tokens: 512
-  max_chunk_tokens: 512
-  validation_split: 0.15  # Keep more for training (small dataset)
+  chunk_size: 768       # Reduced from 1024
+  chunk_overlap: 192
+  max_backstory_tokens: 384   # Reduced from 512
+  max_chunk_tokens: 384       # Reduced from 512
+  validation_split: 0.15
 
 # Paths
 paths:
@@ -39,18 +39,19 @@ paths:
   checkpoint_dir: "./checkpoints"
   log_dir: "./logs"
 
-# Training - H100 OPTIMIZED + STABLE
+# Training - AUDIT FIXED
 training:
-  epochs: 100           # More epochs - H100 is fast
-  learning_rate: 0.0003 # Lower than H100 default, higher than stable
-  weight_decay: 0.05    # Moderate regularization
-  warmup_epochs: 5      # Warmup for stability
-  gradient_accumulation: 1  # H100 has enough memory - full batch
-  max_grad_norm: 1.0
+  epochs: 50            # Reduced from 100 (early stopping will trigger first)
+  learning_rate: 0.00005  # Reduced 6x from 0.0003 (smoother convergence)
+  weight_decay: 0.1     # Increased from 0.05 (more regularization)
+  warmup_epochs: 3      # Reduced from 5
+  gradient_accumulation: 1
+  max_grad_norm: 0.5    # Reduced from 1.0 (tighter gradient clipping)
   use_amp: true
-  compile: false        # Disabled - server missing python3-dev headers
+  compile: false
   log_freq: 5
-  save_every: 10
+  save_every: 5         # More frequent saves
+  early_stopping_patience: 5  # NEW: stop if no improvement for 5 epochs
 
 # Loss
 loss:
@@ -60,6 +61,7 @@ loss:
 # Reproducibility
 seed: 1337
 
-# Device - H100 Optimized
+# Device
 device: cuda
-dtype: bfloat16         # Native H100 precision
+dtype: bfloat16
+         # Native H100 precision

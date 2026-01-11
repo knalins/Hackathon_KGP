@@ -385,9 +385,15 @@ def main():
     grad_accumulation = training_cfg.get('gradient_accumulation', 4)
     log_freq = training_cfg.get('log_freq', 10)
     save_every = training_cfg.get('save_every', 5)
+    early_stopping_patience = training_cfg.get('early_stopping_patience', 5)
+    
+    # Early stopping tracking
+    epochs_without_improvement = 0
+    best_val_loss = float('inf')
     
     print(f"\nStarting training on {device}")
     print(f"Train batches: {len(train_loader)}")
+    print(f"Early stopping patience: {early_stopping_patience} epochs")
     if val_loader:
         print(f"Val batches: {len(val_loader)}")
     
@@ -420,16 +426,28 @@ def main():
             val_acc, val_loss = validate(model, val_loader, device, ctx)
             print(f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
             
-            # Save best model
+            # Save best model (by accuracy)
             is_best = val_acc > best_val_acc
             if is_best:
                 best_val_acc = val_acc
+                epochs_without_improvement = 0
                 print(f"New best model! Accuracy: {val_acc:.4f}")
                 save_checkpoint(
                     model, optimizer, scaler, epoch, best_val_acc,
                     config,
                     os.path.join(checkpoint_dir, "best_model.pt")
                 )
+            else:
+                epochs_without_improvement += 1
+                print(f"No improvement for {epochs_without_improvement} epoch(s)")
+            
+            # Early stopping check
+            if epochs_without_improvement >= early_stopping_patience:
+                print(f"\n{'='*60}")
+                print(f"EARLY STOPPING: No improvement for {early_stopping_patience} epochs")
+                print(f"Best validation accuracy: {best_val_acc:.4f}")
+                print(f"{'='*60}")
+                break
         
         # Regular checkpoint
         if (epoch + 1) % save_every == 0:
