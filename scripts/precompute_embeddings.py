@@ -47,6 +47,12 @@ def main():
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     
+    # Clear GPU memory
+    if device.type == 'cuda':
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        print(f"GPU memory cleared. Available: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+    
     # Create cache directory
     cache_dir = paths_cfg.get('embeddings_cache', './cache')
     Path(cache_dir).mkdir(parents=True, exist_ok=True)
@@ -72,8 +78,8 @@ def main():
     normalizer = TextNormalizer()
     
     chunk_config = ChunkConfig(
-        target_size=data_cfg.get('chunk_size', 1024),
-        overlap=data_cfg.get('chunk_overlap', 256)
+        target_chars=data_cfg.get('chunk_size', 1024),
+        overlap_chars=data_cfg.get('chunk_overlap', 256)
     )
     chunker = NovelChunker(chunk_config)
     
