@@ -8,12 +8,22 @@ Usage:
     python train.py                         # Use config/default.yaml
     python train.py --config custom.yaml    # Use custom config
     python train.py --epochs 30             # Override config values
+    python train.py --gpu 1                 # Use GPU 1
 """
 
 import os
 import sys
 from pathlib import Path
 from contextlib import nullcontext
+
+# CRITICAL: Set GPU BEFORE importing torch
+# Parse --gpu argument early
+for i, arg in enumerate(sys.argv):
+    if arg == '--gpu' and i + 1 < len(sys.argv):
+        gpu_id = sys.argv[i + 1]
+        os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
+        print(f"[EARLY] Setting CUDA_VISIBLE_DEVICES={gpu_id}")
+        break
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
