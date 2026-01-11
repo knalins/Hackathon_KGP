@@ -1,31 +1,31 @@
-# Optimized H100 Configuration
-# Balanced: Uses ~50-60GB per GPU (leaves room for other processes)
+# H100 Optimized Configuration
+# Target: ~70GB per GPU (leaves ~10GB buffer)
 
-# Model Architecture - Moderately larger
+# Model Architecture - Larger for 70GB usage
 model:
-  n_layer: 8            # Increased from 6
-  n_embd: 384           # Increased from 256
-  n_head: 6
-  mlp_multiplier: 192
+  n_layer: 10           # Increased
+  n_embd: 448           # Increased
+  n_head: 8
+  mlp_multiplier: 224
   vocab_size: 256
   dropout: 0.15
 
-# Retrieval - More chunks but not too many
+# Retrieval - More chunks
 retrieval:
-  top_k: 50             # 50 chunks (was 30)
+  top_k: 70             # Increased to 70
   similarity_type: cosine
 
 # Aggregation
 aggregation:
   strategy: max
-  top_k: 5
+  top_k: 7
 
 # Data Processing
 data:
   chunk_size: 1024
   chunk_overlap: 256
-  max_backstory_tokens: 512   # Keep original
-  max_chunk_tokens: 512       # Keep original
+  max_backstory_tokens: 768   # Increased
+  max_chunk_tokens: 768       # Increased
   validation_split: 0.15
 
 # Paths
