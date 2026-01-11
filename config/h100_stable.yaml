@@ -1,0 +1,65 @@
+# H100 Dual-GPU Stable Training Configuration
+# Combines: training stability + H100 performance + 2-GPU utilization
+
+# Model Architecture (balanced for small data + H100 capacity)
+model:
+  n_layer: 6            # Use H100's capacity
+  n_embd: 256           # Full embedding dimension
+  n_head: 4
+  mlp_multiplier: 128
+  vocab_size: 256
+  dropout: 0.2          # Regularization (but not too aggressive)
+
+# Retrieval - leverage H100 memory
+retrieval:
+  top_k: 30             # More chunks on H100
+  similarity_type: cosine
+
+# Aggregation
+aggregation:
+  strategy: max
+  top_k: 5
+
+# Data Processing
+data:
+  chunk_size: 1024
+  chunk_overlap: 256
+  max_backstory_tokens: 512
+  max_chunk_tokens: 512
+  validation_split: 0.15  # Keep more for training (small dataset)
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# Training - H100 OPTIMIZED + STABLE
+training:
+  epochs: 100           # More epochs - H100 is fast
+  learning_rate: 0.0003 # Lower than H100 default, higher than stable
+  weight_decay: 0.05    # Moderate regularization
+  warmup_epochs: 5      # Warmup for stability
+  gradient_accumulation: 1  # H100 has enough memory - full batch
+  max_grad_norm: 1.0
+  use_amp: true
+  compile: true         # torch.compile for H100 speedup
+  log_freq: 5
+  save_every: 10
+
+# Loss
+loss:
+  margin_weight: 0.1
+  margin: 0.3
+
+# Reproducibility
+seed: 1337
+
+# Device - H100 Optimized
+device: cuda
+dtype: bfloat16         # Native H100 precision
