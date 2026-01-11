@@ -1,0 +1,25 @@
+# BDH NLI Pipeline Requirements
+# ==============================
+
+# Core Deep Learning
+torch>=2.0.0
+numpy>=1.24.0
+
+# Data Processing
+pandas>=2.0.0
+
+# Progress & Logging
+tqdm>=4.65.0
+
+# Configuration
+pyyaml>=6.0
+
+# Optional: Faster Training (uncomment if needed)
+# accelerate>=0.20.0
+
+# Optional: Weights & Biases for experiment tracking
+# wandb>=0.15.0
+
+# Development (uncomment for testing)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0

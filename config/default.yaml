@@ -1,0 +1,62 @@
+# BDH NLI Pipeline Configuration
+
+# Model Architecture
+model:
+  n_layer: 6
+  n_embd: 256
+  n_head: 4
+  mlp_multiplier: 128
+  vocab_size: 256
+  dropout: 0.1
+
+# Retrieval
+retrieval:
+  top_k: 20
+  similarity_type: cosine  # cosine, dot, overlap
+
+# Aggregation
+aggregation:
+  strategy: max  # max, mean, attention, noisy_or, top_k
+  top_k: 3  # for top_k strategy
+
+# Data Processing
+data:
+  chunk_size: 1024  # characters
+  chunk_overlap: 256  # characters
+  max_backstory_tokens: 512
+  max_chunk_tokens: 512
+  validation_split: 0.2
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# Training
+training:
+  epochs: 20
+  learning_rate: 0.001  # 1e-3 (official BDH default)
+  weight_decay: 0.1
+  warmup_epochs: 2
+  gradient_accumulation: 4
+  max_grad_norm: 1.0
+  use_amp: true
+  compile: false  # Set true to use torch.compile
+  log_freq: 10
+
+# Loss
+loss:
+  margin_weight: 0.1
+  margin: 0.3
+
+# Reproducibility
+seed: 1337  # Official BDH default
+
+# Device (auto, cuda, cpu, mps)
+device: auto
