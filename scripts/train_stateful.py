@@ -61,13 +61,19 @@ class StatefulNLIModel(nn.Module):
         neuron_dim = config.total_neurons
         emb_dim = config.n_embd
         
-        # Verifier head
+        # Project state neurons to embedding space
+        self.state_proj = nn.Linear(neuron_dim, emb_dim)
+        
+        # Verifier head: compare backstory embedding with projected state
         self.verifier = nn.Sequential(
             nn.Linear(emb_dim * 2, emb_dim),
             nn.LayerNorm(emb_dim),
             nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(emb_dim, emb_dim // 2),
+            nn.ReLU(),
             nn.Dropout(0.2),
-            nn.Linear(emb_dim, 1)  # Output logits
+            nn.Linear(emb_dim // 2, 1)  # Output logits
         )
         
         # Optional neuron interpreter
@@ -93,19 +99,22 @@ class StatefulNLIModel(nn.Module):
         # Process novel and query with backstory
         result = self.stateful_processor(novel_chunks, backstory_ids)
         
-        # Combine backstory embedding with novel state
-        backstory_emb = result['embedding']
-        state_emb = result['state_neurons']
+        # Get backstory embedding and projected state
+        backstory_emb = result['embedding']  # (B, D)
+        state_neurons = result['state_neurons']  # (B, H*N)
         
-        # Simple verification: compare backstory to accumulated state
-        combined = torch.cat([backstory_emb, backstory_emb], dim=-1)  # Placeholder
+        # Project state neurons to embedding space
+        state_emb = self.state_proj(state_neurons)  # (B, D)
+        
+        # Combine backstory with state for verification
+        combined = torch.cat([backstory_emb, state_emb], dim=-1)  # (B, 2*D)
         logit = self.verifier(combined)
         
         output = {
             'logit': logit,
             'prediction': torch.sigmoid(logit),
             'backstory_trace': result['neuron_trace'],
-            'state_neurons': state_emb,
+            'state_neurons': state_neurons,
             'num_tokens': result['num_tokens_processed']
         }
         
@@ -267,8 +276,10 @@ def main():
     
     best_val_acc = 0.0
     epochs = args.epochs or training_cfg.get('epochs', 50)
+    early_stopping_patience = training_cfg.get('early_stopping_patience', 3)
+    epochs_without_improvement = 0
     
-    print(f"\nTraining for {epochs} epochs...")
+    print(f"\nTraining for {epochs} epochs (early stopping patience: {early_stopping_patience})...")
     print("=" * 60)
     
     for epoch in range(epochs):
@@ -357,6 +368,7 @@ def main():
             
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
+                epochs_without_improvement = 0
                 torch.save({
                     'model': model.state_dict(),
                     'config': config,
@@ -364,6 +376,14 @@ def main():
                     'val_acc': val_acc
                 }, os.path.join(checkpoint_dir, 'best_stateful_model.pt'))
                 print("  Saved best model!")
+            else:
+                epochs_without_improvement += 1
+                print(f"  No improvement for {epochs_without_improvement} validation(s)")
+            
+            # Early stopping
+            if epochs_without_improvement >= early_stopping_patience:
+                print(f"\nEARLY STOPPING: No improvement for {early_stopping_patience} validations")
+                break
     
     print(f"\nTraining complete! Best val acc: {best_val_acc:.4f}")
 
