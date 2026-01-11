@@ -265,6 +265,25 @@ python scripts/train.py --config config/custom.yaml
 python scripts/train.py --compile --device cuda
 ```
 
+### Multi-GPU Training (2x H100)
+
+```bash
+# Train on 2 GPUs using DDP
+torchrun --nproc_per_node=2 scripts/train_multi_gpu.py --config config/h100.yaml --compile
+
+# With specific GPUs
+CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node=2 scripts/train_multi_gpu.py
+
+# Override settings
+torchrun --nproc_per_node=2 scripts/train_multi_gpu.py --epochs 100 --compile
+```
+
+**H100 Config (`config/h100.yaml`):**
+- `dtype: bfloat16` - Native H100 precision
+- `compile: true` - torch.compile for 2-3x speedup
+- `top_k: 50` - More chunks (fits in 81GB)
+- `epochs: 100` - More training
+
 ### Inference
 
 ```bash
