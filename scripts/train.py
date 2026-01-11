@@ -35,20 +35,24 @@ def load_config(config_path: str) -> dict:
         return yaml.safe_load(f)
 
 
-def setup_device_and_dtype(device_config: str = "auto"):
-    """Setup device and dtype following official BDH patterns."""
+def setup_device_and_dtype(device_config: str = "auto", dtype_config: str = "auto"):
+    """Setup device and dtype following official BDH patterns with H100 optimizations."""
     # Determine device
     if device_config == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device(device_config)
     
-    # Determine dtype (from official BDH)
-    dtype = (
-        "bfloat16"
-        if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-        else "float16"
-    )
+    # Determine dtype
+    if dtype_config != "auto":
+        dtype = dtype_config
+    else:
+        # Auto-detect: prefer bfloat16 for H100/A100
+        dtype = (
+            "bfloat16"
+            if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+            else "float16"
+        )
     
     ptdtype = {
         "float32": torch.float32,
@@ -63,17 +67,30 @@ def setup_device_and_dtype(device_config: str = "auto"):
         else nullcontext()
     )
     
-    # GradScaler (from official BDH)
+    # GradScaler - disabled for bfloat16 (not needed on H100/A100)
     scaler = torch.amp.GradScaler(device=device.type, enabled=(dtype == "float16"))
     
-    # TF32 settings (from official BDH)
+    # H100/A100 optimizations
     if torch.cuda.is_available():
+        # TF32 for Tensor Cores (from official BDH)
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
+        
+        # Enable cudnn benchmark for consistent input sizes
+        torch.backends.cudnn.benchmark = True
+        
+        # Set high precision for matmul (H100 specific)
+        torch.set_float32_matmul_precision('high')
+        
+        # Print GPU info
+        gpu_name = torch.cuda.get_device_name(0)
+        gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
+        print(f"GPU: {gpu_name} ({gpu_memory:.1f} GB)")
     
     print(f"Using device: {device} with dtype {dtype}")
     
     return device, dtype, ptdtype, ctx, scaler
+
 
 
 def parse_args():
@@ -268,9 +285,10 @@ def main():
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
     
-    # Setup device and dtype (official BDH pattern)
+    # Setup device and dtype (official BDH pattern + H100 optimizations)
     device_config = config.get('device', 'auto')
-    device, dtype, ptdtype, ctx, scaler = setup_device_and_dtype(device_config)
+    dtype_config = config.get('dtype', 'auto')
+    device, dtype, ptdtype, ctx, scaler = setup_device_and_dtype(device_config, dtype_config)
     
     # Data config
     data_config = DataConfig(

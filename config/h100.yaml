@@ -1,0 +1,65 @@
+# H100 GPU Optimized Configuration
+# Maximizes H100 performance with bfloat16, torch.compile, and larger batches
+
+# Model Architecture (larger for H100's memory)
+model:
+  n_layer: 6
+  n_embd: 256
+  n_head: 4
+  mlp_multiplier: 128
+  vocab_size: 256
+  dropout: 0.1
+
+# Retrieval
+retrieval:
+  top_k: 30  # Increased for better recall
+  similarity_type: cosine
+
+# Aggregation
+aggregation:
+  strategy: max
+  top_k: 5
+
+# Data Processing
+data:
+  chunk_size: 1024
+  chunk_overlap: 256
+  max_backstory_tokens: 512
+  max_chunk_tokens: 512
+  validation_split: 0.2
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# Training - H100 Optimized
+training:
+  epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.1
+  warmup_epochs: 3
+  gradient_accumulation: 1  # H100 has enough memory
+  max_grad_norm: 1.0
+  use_amp: true
+  compile: true  # torch.compile for H100
+  log_freq: 5
+  save_every: 10
+
+# Loss
+loss:
+  margin_weight: 0.1
+  margin: 0.3
+
+# Reproducibility
+seed: 1337
+
+# Device - H100 optimized
+device: cuda
+dtype: bfloat16  # H100 is optimized for bfloat16
