@@ -283,14 +283,14 @@ def main():
                     back_emb, back_trace,
                     cache['embeddings'], cache['traces']
                 )
-                
-                # Loss
-                pred = result['prediction']
-                target = torch.tensor([label], device=device)
-                
-                weight = pos_weight if label == 1.0 else 1.0
-                loss = F.binary_cross_entropy(pred.view(-1), target, reduction='none') * weight
-                loss = loss.mean()
+            
+            # Loss (outside autocast for BCE safety)
+            pred = result['prediction'].float()
+            target = torch.tensor([label], device=device, dtype=torch.float32)
+            
+            weight = pos_weight if label == 1.0 else 1.0
+            loss = F.binary_cross_entropy(pred.view(-1), target, reduction='none') * weight
+            loss = loss.mean()
             
             loss.backward()
             torch.nn.utils.clip_grad_norm_(all_params, 1.0)
