@@ -1,0 +1,65 @@
+# Optimized H100 Configuration
+# Balanced: Uses ~50-60GB per GPU (leaves room for other processes)
+
+# Model Architecture - Moderately larger
+model:
+  n_layer: 8            # Increased from 6
+  n_embd: 384           # Increased from 256
+  n_head: 6
+  mlp_multiplier: 192
+  vocab_size: 256
+  dropout: 0.15
+
+# Retrieval - More chunks but not too many
+retrieval:
+  top_k: 50             # 50 chunks (was 30)
+  similarity_type: cosine
+
+# Aggregation
+aggregation:
+  strategy: max
+  top_k: 5
+
+# Data Processing
+data:
+  chunk_size: 1024
+  chunk_overlap: 256
+  max_backstory_tokens: 512   # Keep original
+  max_chunk_tokens: 512       # Keep original
+  validation_split: 0.15
+
+# Paths
+paths:
+  data_dir: "./data"
+  train_csv: "train - train.csv"
+  test_csv: "test - test.csv"
+  novel_files:
+    "In Search of the Castaways": "In search of the castaways.txt"
+    "The Count of Monte Cristo": "The Count of Monte Cristo.txt"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# Training
+training:
+  epochs: 100
+  learning_rate: 0.0003
+  weight_decay: 0.05
+  warmup_epochs: 5
+  gradient_accumulation: 1
+  max_grad_norm: 1.0
+  use_amp: true
+  compile: false
+  log_freq: 5
+  save_every: 10
+
+# Loss
+loss:
+  margin_weight: 0.1
+  margin: 0.3
+
+# Reproducibility
+seed: 1337
+
+# Device
+device: cuda
+dtype: bfloat16
