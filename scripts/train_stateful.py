@@ -223,17 +223,22 @@ def main():
         dropout=model_cfg.get('dropout', 0.1)
     )
     
-    # Load novels as chunks
+    # Load novels as chunks (LIMITED to prevent OOM)
     print("\nLoading and chunking novels...")
     data_dir = paths_cfg.get('data_dir', './data')
     novel_files = paths_cfg.get('novel_files', {})
+    max_chunks_per_novel = 100  # Limit to prevent OOM on H100
     
     novel_chunks = {}
     for book_name, filename in novel_files.items():
         novel_path = os.path.join(data_dir, filename)
         chunks = load_novel_as_chunks(novel_path, tokenizer, max_tokens)
+        # Sample subset of chunks to fit in memory
+        if len(chunks) > max_chunks_per_novel:
+            step = len(chunks) // max_chunks_per_novel
+            chunks = chunks[::step][:max_chunks_per_novel]
         novel_chunks[book_name] = chunks
-        print(f"  {book_name}: {len(chunks)} chunks")
+        print(f"  {book_name}: {len(chunks)} chunks (limited)")
     
     # Create model
     model = StatefulNLIModel(
