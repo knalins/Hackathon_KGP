@@ -259,7 +259,9 @@ def main():
     )
     
     model = BDHNLIPipeline(pipeline_config).to(device)
-    model = DDP(model, device_ids=[local_rank])
+    # find_unused_parameters=True: Some params may not be used in every forward pass
+    # (e.g., retriever selects subset of chunks, some encoder params may be skipped)
+    model = DDP(model, device_ids=[local_rank], find_unused_parameters=True)
     
     if training_cfg.get('compile', False) and hasattr(torch, 'compile'):
         if is_main_process():
