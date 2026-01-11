@@ -251,6 +251,7 @@ def main():
             
             # Format backstory
             backstory_text = format_backstory_input(
+                book_name=book_name,
                 character=row.get('char', ''),
                 caption=row.get('caption', ''),
                 content=content
@@ -258,7 +259,7 @@ def main():
             backstory_text = normalizer.normalize(backstory_text)
             
             # Tokenize backstory
-            backstory_tokens = tokenizer.encode(backstory_text, max_length=max_backstory, padding=True)
+            backstory_tokens = tokenizer.encode(backstory_text, max_length=max_backstory, padding=True, return_tensors='pt')
             backstory_tokens = backstory_tokens.unsqueeze(0).to(device)
             
             # Get cached chunks
@@ -324,12 +325,13 @@ def main():
                     label = 1.0 if row['label'] == 'consistent' else 0.0
                     
                     backstory_text = format_backstory_input(
+                        book_name=book_name,
                         character=row.get('char', ''),
                         caption=row.get('caption', ''),
                         content=content
                     )
                     backstory_text = normalizer.normalize(backstory_text)
-                    backstory_tokens = tokenizer.encode(backstory_text, max_length=max_backstory, padding=True)
+                    backstory_tokens = tokenizer.encode(backstory_text, max_length=max_backstory, padding=True, return_tensors='pt')
                     backstory_tokens = backstory_tokens.unsqueeze(0).to(device)
                     
                     cache = chunk_cache[book_name]
